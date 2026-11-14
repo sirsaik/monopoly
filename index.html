@@ -38,16 +38,51 @@ input{font:inherit;width:100%;padding:10px;border:1px solid var(--bd);border-rad
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:#222;color:#fff;padding:10px 16px;border-radius:20px;z-index:30;display:none;max-width:90%;text-align:center}
 .lg{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--bd);padding:8px 0;font-size:14px}.lg small{color:var(--mu)}
 </style>
+<style>
+header{background:linear-gradient(135deg,#1b7f4b,#0d5a34);color:#fff;border:0;padding:14px 16px;box-shadow:0 2px 12px #0004}
+header h1{font-size:20px;letter-spacing:.3px}
+header button{background:#ffffff26;color:#fff;border:1px solid #fff5;border-radius:20px;padding:8px 14px;font-size:14px}
+header button.on{background:#fff;color:#0d5a34}
+button{font-weight:600;transition:transform .08s,filter .15s}
+button:active{transform:scale(.96);filter:brightness(.92)}
+.grid{gap:12px}
+.pl{display:flex;flex-direction:column;gap:2px;border:0;border-top:5px solid var(--c);border-radius:16px;padding:14px;box-shadow:0 2px 10px #0002}
+.pl .av{width:36px;height:36px;border-radius:50%;background:var(--c);color:#fff;display:grid;place-items:center;font-weight:800;font-size:17px;margin-bottom:6px}
+.pl .m{font-size:25px;letter-spacing:-.5px}
+.box{border:0;border-radius:16px;box-shadow:0 2px 8px #0001}
+.potbox{background:linear-gradient(135deg,#f9a825,#e65100);color:#fff;display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding:16px;font-size:16px}
+.potbox b:last-child{font-size:30px}
+nav{box-shadow:0 -2px 14px #0002}
+nav button{font-size:12px;padding:8px 4px;line-height:1.3}
+nav .ic{display:block;font-size:22px}
+.ov{backdrop-filter:blur(3px);animation:fd .2s}
+.sheet{border-radius:26px 26px 0 0;padding-top:28px;position:relative;animation:up .25s ease-out}
+.sheet::before{content:"";position:absolute;top:10px;left:50%;width:42px;height:4px;margin-left:-21px;border-radius:2px;background:var(--bd)}
+.sheet h2{background:var(--card);border-radius:14px;padding:12px 14px;box-shadow:0 1px 6px #0001}
+#amt{font-size:30px;font-weight:800;text-align:center;padding:14px;border-radius:16px;border:2px solid var(--ac)}
+.chips button{border-radius:999px;background:var(--card);padding:9px 14px}
+.lbl{text-transform:uppercase;letter-spacing:.8px;font-size:11px;font-weight:700;margin-top:18px}
+.row button.g,.row button.r,.row button.p{padding:15px 10px;font-size:15px;border-radius:14px;box-shadow:0 2px 6px #0003}
+.lg{padding:12px 4px}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+.cmdb{width:100%;padding:16px;font-size:18px;margin-top:12px;border-radius:16px;box-shadow:0 3px 10px #0003}
+.cmdo{display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin-top:8px;padding:14px;border-radius:14px;font-size:16px}.cmdo span{font-size:22px}
+.sheet.big{text-align:center}.bigm{font-size:46px;font-weight:800;letter-spacing:-1px;margin:6px 0 12px}
+.av2{width:72px;height:72px;border-radius:50%;background:var(--c);color:#fff;display:grid;place-items:center;font-size:32px;font-weight:800;margin:0 auto 8px}
+.pulse{font-size:52px;line-height:1.1}
+.rr{display:flex;justify-content:space-between;align-items:center;background:var(--card);border-radius:12px;padding:10px 14px;margin:8px 0;text-align:left}
+@keyframes fd{from{opacity:0}}
+</style>
 </head>
 <body>
 <header><h1>🏦 Banco Monopoly</h1><button id="nfcb" onclick="startNFC()">📡 Activar NFC</button></header>
 <main id="main"></main>
-<nav><button id="t0" onclick="go(0)">Jugadores</button><button id="t1" onclick="go(1)">Historial</button><button id="t2" onclick="go(2)">Ajustes</button></nav>
-<div id="modal"></div><div id="toast"></div>
+<nav><button id="t0" onclick="go(0)"><span class="ic">👥</span>Jugadores</button><button id="t1" onclick="go(1)"><span class="ic">🧾</span>Historial</button><button id="t2" onclick="go(2)"><span class="ic">⚙️</span>Ajustes</button></nav>
+<div id="modal"></div><div id="modal2"></div><div id="toast"></div>
 <script>
 const KEY='monopoly-nfc-v1',COL=['#e53935','#1e88e5','#43a047','#fb8c00','#8e24aa','#00acc1','#fdd835','#6d4c41'];
 const PRE=[['Salida',200],['Impuesto',200],['Lujo',100],['Fianza',50],['Comunidad',100]];
-let S=load()||{players:[],log:[],start:1500},view=0,cur=null,amt='',note='',assigning=null,nfcOn=false,resetArm=false;
+let S=load()||{players:[],log:[],start:1500,pot:0},view=0,cur=null,amt='',note='',assigning=null,nfcOn=false,resetArm=false;
 function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 const $=s=>document.querySelector(s),fmt=n=>n.toLocaleString('es-ES')+' €',P=id=>S.players.find(p=>p.id===id);
@@ -55,18 +90,18 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',2600)}
 function buzz(){try{navigator.vibrate&&navigator.vibrate(60)}catch(e){}}
 function go(v){view=v;resetArm=false;render()}
-function apply(ch,desc){
+function apply(ch,desc,b){b=b||0;
   for(const c of ch){const p=P(c.pid);if(p.bal+c.d<0){toast('⚠️ '+p.name+' no tiene saldo suficiente ('+fmt(p.bal)+')');return false}}
-  ch.forEach(c=>P(c.pid).bal+=c.d);
-  S.log.unshift({t:Date.now(),d:desc,c:ch});S.log=S.log.slice(0,300);save();buzz();return true}
-function undo(){const l=S.log.shift();if(!l)return;l.c.forEach(c=>{const p=P(c.pid);if(p)p.bal-=c.d});save();toast('Deshecho: '+l.d);render()}
+  ch.forEach(c=>P(c.pid).bal+=c.d);S.pot=(S.pot||0)+b;
+  S.log.unshift({t:Date.now(),d:desc,c:ch,b:b});S.log=S.log.slice(0,300);save();buzz();return true}
+function undo(){const l=S.log.shift();if(!l)return;l.c.forEach(c=>{const p=P(c.pid);if(p)p.bal-=c.d});S.pot=(S.pot||0)-(l.b||0);save();toast('Deshecho: '+l.d);render()}
 function render(){
   [0,1,2].forEach(i=>$('#t'+i).className=view===i?'on':'');
   const m=$('#main');let h='';
   if(view===0){
     if(!S.players.length)h='<div class="box">Aún no hay jugadores. Ve a <b>Ajustes</b> para añadirlos y asignarles su tarjeta.</div>';
-    else h='<div class="grid">'+S.players.map(p=>`<button class="pl" style="--c:${p.color}" onclick="openP('${p.id}')"><b>${esc(p.name)}</b><div class="m ${p.bal<=0?'neg':''}">${fmt(p.bal)}</div><small>${p.tag?'💳 tarjeta asignada':'sin tarjeta'}</small></button>`).join('')+'</div>';
-    h+=`<div class="box" style="margin-top:12px">${nfcOn?'📡 NFC activo: acerca una tarjeta al móvil.':'Pulsa “Activar NFC” arriba para leer tarjetas, o toca un jugador.'}</div>`;
+    else h='<div class="grid">'+S.players.map(p=>`<button class="pl" style="--c:${p.color}" onclick="openP('${p.id}')"><span class="av">${esc((p.name[0]||'?').toUpperCase())}</span><b>${esc(p.name)}</b><div class="m ${p.bal<=0?'neg':''}">${fmt(p.bal)}</div><small>${p.tag?'💳 tarjeta asignada':'sin tarjeta'}</small></button>`).join('')+'</div>';
+    h+=`<div class="box potbox"><span>🅿️ <b>Bote del Parking</b></span><b style="font-size:22px">${fmt(S.pot||0)}</b></div><button class="p cmdb" onclick="openCmd()">⚡ Nuevo comando</button><div class="box">${nfcOn?'📡 NFC activo: acerca una tarjeta para ver su saldo, o crea un comando.':'Pulsa “Activar NFC” arriba para leer tarjetas, o toca un jugador.'}</div>`;
     if(S.log.length)h+=`<button onclick="undo()" style="width:100%">↩️ Deshacer: ${esc(S.log[0].d)}</button>`;
   }else if(view===1){
     h=S.log.length?`<button onclick="undo()" style="width:100%;margin-bottom:8px">↩️ Deshacer último movimiento</button>`+S.log.map(l=>`<div class="lg"><span>${esc(l.d)}</span><small>${new Date(l.t).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</small></div>`).join(''):'<div class="box">Sin movimientos todavía.</div>';
@@ -76,7 +111,7 @@ function render(){
     h+=S.players.map(p=>`<div class="box" style="border-left:8px solid ${p.color}"><input value="${esc(p.name)}" maxlength="14" onchange="P('${p.id}').name=this.value||'Jugador';save()">
     <div class="row"><button class="${assigning===p.id?'on':''}" onclick="assign('${p.id}')">${assigning===p.id?'Acerca la tarjeta…':p.tag?'💳 Cambiar tarjeta':'💳 Asignar tarjeta'}</button>
     <button onclick="setBal('${p.id}')">✏️ Saldo</button><button onclick="delP('${p.id}')">🗑️</button></div></div>`).join('');
-    h+=`<button class="r" style="width:100%;margin-top:6px" onclick="resetG()">${resetArm?'¿Seguro? Pulsa otra vez para borrar todo':'Nueva partida (borra todo)'}</button>`;
+    h+=`<button style="width:100%;margin-top:6px" onclick="setPot()">✏️ Corregir bote (${fmt(S.pot||0)})</button><button class="r" style="width:100%;margin-top:6px" onclick="resetG()">${resetArm?'¿Seguro? Pulsa otra vez para borrar todo':'Nueva partida (borra todo)'}</button>`;
   }
   m.innerHTML=h;
 }
@@ -86,7 +121,7 @@ function delP(id){const p=P(id);if(p.del){S.players=S.players.filter(x=>x.id!==i
 function setBal(id){const p=P(id),v=prompt('Nuevo saldo de '+p.name,p.bal);if(v===null)return;const n=Math.floor(+v);if(isNaN(n)||n<0)return toast('Cantidad no válida');
   S.log.unshift({t:Date.now(),d:'Ajuste manual: '+p.name+' pasa a '+fmt(n),c:[{pid:id,d:n-p.bal}]});p.bal=n;save();render()}
 function resetG(){if(!resetArm){resetArm=true;render();setTimeout(()=>{resetArm=false;if(view===2)render()},4000);return}
-  S.players.forEach(p=>{p.bal=S.start});S.log=[];resetArm=false;save();toast('Saldos reiniciados (jugadores y tarjetas se conservan)');render()}
+  S.players.forEach(p=>{p.bal=S.start});S.log=[];S.pot=0;resetArm=false;save();toast('Saldos reiniciados (jugadores y tarjetas se conservan)');render()}
 function assign(id){assigning=assigning===id?null:id;if(assigning&&!nfcOn)startNFC();render()}
 async function startNFC(){
   if(!('NDEFReader' in window)){toast('Este navegador no soporta NFC. Abre el enlace en Chrome para Android.');return}
@@ -99,7 +134,42 @@ async function startNFC(){
 function onTag(id){
   if(assigning){const o=S.players.find(p=>p.tag===id&&p.id!==assigning);if(o){toast('Esa tarjeta ya es de '+o.name);return}
     const p=P(assigning);p.tag=id;assigning=null;save();buzz();toast('Tarjeta asignada a '+p.name);render();return}
-  const p=S.players.find(p=>p.tag===id);if(!p){toast('Tarjeta sin asignar. Ve a Ajustes.');return}buzz();openP(p.id)}
+  const p=S.players.find(p=>p.tag===id);if(!p){toast('Tarjeta sin asignar. Ve a Ajustes.');return}buzz();tapPlayer(p.id)}
+const CT={charge:['➖','Cobrar a la banca'],pot:['🅿️','Cobrar al bote'],give:['➕','Pagar al jugador (de la banca)'],takepot:['🎉','Dar el bote del Parking'],xfer:['🔁','Transferencia entre jugadores']};
+let cmd=null,tmr=null,camt='',cnote='';
+function tapPlayer(id){if(cmd){if(cmd.done){toast('Pulsa Repetir o Cerrar');return}runCmd(id);return}showBal(id)}
+function closeM2(e){if(e&&e.target.className!=='ov')return;cmd=null;$('#modal2').innerHTML='';render()}
+function showBal(id){const p=P(id);
+ $('#modal2').innerHTML=`<div class="ov" onclick="closeM2(event)"><div class="sheet big" style="--c:${p.color}"><div class="av2">${esc((p.name[0]||'?').toUpperCase())}</div><h2>${esc(p.name)}</h2><div class="bigm ${p.bal<=0?'neg':''}">${fmt(p.bal)}</div><div class="row"><button class="p" onclick="closeM2();openP('${id}')">Operar</button><button onclick="closeM2()">Cerrar</button></div></div></div>`}
+function openCmd(){drawCmd()}
+function setC(n,t){camt=String(n);cnote=t;drawCmd()}
+function drawCmd(){$('#modal2').innerHTML=`<div class="ov" onclick="closeM2(event)"><div class="sheet"><h2>⚡ Nuevo comando</h2>
+<input id="camt" type="number" inputmode="numeric" placeholder="Cantidad (€)" value="${camt}" oninput="camt=this.value;cnote=''">
+<div class="chips">${[10,20,50,100,200,500].map(n=>`<button onclick="setC(${n},'')">${n}</button>`).join('')}</div>
+<div class="lbl">Atajos</div><div class="chips">${PRE.map(x=>`<button onclick="setC(${x[1]},'${x[0]}')">${x[0]} ${x[1]}</button>`).join('')}</div>
+<div class="lbl">¿Qué hay que hacer?</div>${Object.keys(CT).map(k=>`<button class="cmdo" onclick="startCmd('${k}')"><span>${CT[k][0]}</span> ${CT[k][1]}</button>`).join('')}
+<button style="width:100%;margin-top:10px" onclick="closeM2()">Cerrar</button></div></div>`}
+function startCmd(k){const a=Math.floor(Number($('#camt').value))||0;
+ if(k!=='takepot'&&!(a>0)){toast('Escribe una cantidad mayor que 0');return}
+ if(k==='takepot'&&!(S.pot>0)){toast('El bote está vacío');return}
+ if(S.players.length<(k==='xfer'?2:1)){toast('Faltan jugadores');return}
+ cmd={t:k,a:a,n:cnote,from:null,done:false};if(!nfcOn)startNFC();drawWait()}
+function drawWait(){const c=cmd,d=CT[c.t];c.done=false;
+ const inst=c.t==='xfer'?(c.from?'Paga '+esc(P(c.from).name)+'. Ahora acerca la tarjeta de quien COBRA':'Acerca la tarjeta de quien PAGA'):'Acerca la tarjeta del jugador';
+ $('#modal2').innerHTML=`<div class="ov"><div class="sheet big"><div class="pulse">📡</div><h2>${d[0]} ${d[1]}</h2><div class="bigm">${c.t==='takepot'?fmt(S.pot||0):fmt(c.a)}</div><p style="color:var(--mu)">${inst}</p><div class="lbl">O elige manualmente</div><div class="chips" style="justify-content:center">${S.players.filter(x=>x.id!==c.from).map(x=>`<button style="border-left:6px solid ${x.color}" onclick="runCmd('${x.id}')">${esc(x.name)}</button>`).join('')}</div><button style="width:100%;margin-top:8px" onclick="closeM2()">Cancelar</button></div></div>`}
+function runCmd(id){const c=cmd;if(!c||c.done)return;const p=P(id);if(!p)return;
+ if(c.t==='xfer'&&!c.from){c.from=id;buzz();drawWait();return}
+ const n=c.n?' ('+c.n+')':'';let ch,desc,b=0;
+ if(c.t==='charge'){ch=[{pid:id,d:-c.a}];desc=`${p.name} paga ${fmt(c.a)} a la banca${n}`}
+ else if(c.t==='pot'){ch=[{pid:id,d:-c.a}];b=c.a;desc=`${p.name} paga ${fmt(c.a)} al bote${n}`}
+ else if(c.t==='give'){ch=[{pid:id,d:c.a}];desc=`${p.name} cobra ${fmt(c.a)} de la banca${n}`}
+ else if(c.t==='takepot'){const pb=S.pot||0;if(!pb){toast('El bote está vacío');return}ch=[{pid:id,d:pb}];b=-pb;desc=`${p.name} cobra el bote del Parking: ${fmt(pb)}`}
+ else{if(id===c.from){toast('Elige a otro jugador');return}const f=P(c.from);ch=[{pid:c.from,d:-c.a},{pid:id,d:c.a}];desc=`${f.name} paga ${fmt(c.a)} a ${p.name}${n}`}
+ showResult(apply(ch,desc,b),ch)}
+function showResult(ok,ch){cmd.done=true;
+ const rows=ch.map(x=>{const q=P(x.pid);return `<div class="rr" style="border-left:6px solid ${q.color}"><b>${esc(q.name)}</b><span style="text-align:right">${ok?`<b class="${x.d<0?'neg':'pos'}">${x.d>0?'+':'−'}${fmt(Math.abs(x.d))}</b><br>`:''}<small>Saldo ${fmt(q.bal)}</small></span></div>`}).join('');
+ $('#modal2').innerHTML=`<div class="ov"><div class="sheet big"><div class="pulse">${ok?'✅':'❌'}</div><h2>${ok?'Hecho':'Saldo insuficiente'}</h2>${rows}<div class="row"><button class="p" onclick="again()">${ok?'🔁 Repetir comando':'Reintentar'}</button><button onclick="closeM2()">Cerrar</button></div></div></div>`}
+function again(){if(cmd.t==='xfer')cmd.from=null;if(cmd.t==='takepot'&&!(S.pot>0)){toast('El bote está vacío');return}drawWait()}
 function openP(id){cur=id;amt='';note='';drawM()}
 function closeM(e){if(e&&e.target.className!=='ov')return;cur=null;$('#modal').innerHTML='';render()}
 function drawM(){
@@ -108,10 +178,16 @@ function drawM(){
   <input id="amt" type="number" inputmode="numeric" placeholder="Cantidad (€)" value="${amt}" oninput="amt=this.value;note=''">
   <div class="chips">${[10,20,50,100,500].map(n=>`<button onclick="setA(${n},'')">${n}</button>`).join('')}</div>
   <div class="lbl">Atajos</div><div class="chips">${PRE.map((x,i)=>`<button onclick="setA(${x[1]},'${x[0]}')">${x[0]} ${x[1]}</button>`).join('')}</div>
-  <div class="lbl">Banca</div><div class="row"><button class="g" onclick="bank(1)">＋ Cobrar de la banca</button><button class="r" onclick="bank(-1)">－ Pagar a la banca</button></div>
+  <div class="lbl">Bote del Parking: ${fmt(S.pot||0)}</div><div class="row"><button class="r" onclick="toPot()">🅿️ Pagar al bote</button><button class="g" onclick="takePot()">🎉 Cobrar el bote</button></div><div class="lbl">Banca</div><div class="row"><button class="g" onclick="bank(1)">＋ Cobrar de la banca</button><button class="r" onclick="bank(-1)">－ Pagar a la banca</button></div>
   <div class="lbl">Pagar a otro jugador</div><div class="chips">${S.players.filter(x=>x.id!==cur).map(x=>`<button style="border-left:6px solid ${x.color}" onclick="pay('${x.id}')">${esc(x.name)}</button>`).join('')||'<small>No hay más jugadores</small>'}</div>
-  <div class="lbl">Con todos los demás</div><div class="row"><button onclick="all(1)">Cobrar a todos</button><button onclick="all(-1)">Pagar a todos</button></div>
+  <div class="lbl">Con todos los demás</div><div class="row"><button class="g" onclick="todos(1)">⬇️ Cobrar a todos</button><button class="r" onclick="todos(-1)">⬆️ Pagar a todos</button></div>
   <button style="width:100%;margin-top:8px" onclick="closeM()">Cerrar</button></div></div>`}
+function toPot(){const a=getA();if(!a)return;const p=P(cur);
+  if(apply([{pid:cur,d:-a}],`${p.name} paga ${fmt(a)} al bote${note?' ('+note+')':''}`,a)){toast('Al bote: '+fmt(a)+' · Bote: '+fmt(S.pot));done()}}
+function takePot(){const b=S.pot||0;if(!b){toast('El bote está vacío');return}const p=P(cur);
+  if(apply([{pid:cur,d:b}],`${p.name} cobra el bote del Parking: ${fmt(b)}`,-b)){toast('🎉 '+p.name+' cobra '+fmt(b));done()}}
+function setPot(){const v=prompt('Nuevo importe del bote',S.pot||0);if(v===null)return;const n=Math.floor(+v);if(isNaN(n)||n<0)return toast('Cantidad no válida');
+  S.log.unshift({t:Date.now(),d:'Ajuste manual: bote pasa a '+fmt(n),c:[],b:n-(S.pot||0)});S.pot=n;save();render()}
 function setA(n,t){amt=String(n);note=t;drawM()}
 function getA(){const a=Math.floor(Number($('#amt').value));if(!(a>0)){toast('Escribe una cantidad mayor que 0');return 0}return a}
 function done(){amt='';note='';drawM();render()}
@@ -119,7 +195,7 @@ function bank(s){const a=getA();if(!a)return;const p=P(cur),n=note?' ('+note+')'
   if(apply([{pid:cur,d:s*a}],s>0?`${p.name} cobra ${fmt(a)} de la banca${n}`:`${p.name} paga ${fmt(a)} a la banca${n}`)){toast(s>0?'Cobrado '+fmt(a):'Pagado '+fmt(a));done()}}
 function pay(id){const a=getA();if(!a)return;const p=P(cur),q=P(id);
   if(apply([{pid:cur,d:-a},{pid:id,d:a}],`${p.name} paga ${fmt(a)} a ${q.name}${note?' ('+note+')':''}`)){toast(`${p.name} → ${q.name}: ${fmt(a)}`);done()}}
-function all(s){const a=getA();if(!a)return;const p=P(cur),o=S.players.filter(x=>x.id!==cur);if(!o.length)return;
+function todos(s){const a=getA();if(!a)return;const p=P(cur),o=S.players.filter(x=>x.id!==cur);if(!o.length)return;
   const ch=[{pid:cur,d:s*a*o.length},...o.map(x=>({pid:x.id,d:-s*a}))];
   if(apply(ch,s>0?`${p.name} cobra ${fmt(a)} a cada jugador${note?' ('+note+')':''}`:`${p.name} paga ${fmt(a)} a cada jugador${note?' ('+note+')':''}`)){toast('Hecho');done()}}
 render();
