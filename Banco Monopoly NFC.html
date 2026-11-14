@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Banco Monopoly NFC</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f3f1ea;--card:#fff;--tx:#1d1d1b;--mu:#6b6b66;--bd:#dcd9cf;--ac:#1b7f4b;--rd:#c62828;--gr:#2e7d32}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#16181a;--card:#222527;--tx:#eee;--mu:#9a9a94;--bd:#37393b;--ac:#43b97a;--rd:#ef6b6b;--gr:#66c26a}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#16181a;--card:#222527;--tx:#eee;--mu:#9a9a94;--bd:#37393b;--ac:#43b97a;--rd:#ef6b6b;--gr:#66c26a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding-bottom:70px}
+header{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:5;display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--bd)}
+header h1{font-size:18px;margin:0;flex:1}
+button{font:inherit;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:10px;padding:10px 14px;cursor:pointer}
+button.p{background:var(--ac);color:#fff;border-color:var(--ac)}
+button.g{background:var(--gr);color:#fff;border:0}
+button.r{background:var(--rd);color:#fff;border:0}
+button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{flex:1;border:0;border-radius:0;background:none;padding:14px 4px}
+nav button.on{color:var(--ac);font-weight:700;background:none}
+main{padding:12px 14px;max-width:640px;margin:auto}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pl{background:var(--card);border:1px solid var(--bd);border-left:8px solid var(--c);border-radius:12px;padding:12px;text-align:left;width:100%}
+.pl b{display:block;font-size:17px}.pl .m{font-size:22px;font-weight:700;margin-top:4px}.pl small{color:var(--mu)}
+.box{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:10px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.row>*{flex:1}
+input{font:inherit;width:100%;padding:10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx)}
+.ov{position:fixed;inset:0;background:#0008;z-index:20;display:flex;align-items:flex-end}
+.sheet{background:var(--bg);width:100%;max-width:640px;margin:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:92vh;overflow:auto}
+.sheet h2{margin:0 0 8px;font-size:20px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.chips button{flex:none;padding:8px 12px}
+.lbl{color:var(--mu);font-size:13px;margin-top:10px}
+.neg{color:var(--rd)}.pos{color:var(--gr)}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:#222;color:#fff;padding:10px 16px;border-radius:20px;z-index:30;display:none;max-width:90%;text-align:center}
+.lg{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--bd);padding:8px 0;font-size:14px}.lg small{color:var(--mu)}
+</style>
+</head>
+<body>
+<header><h1>🏦 Banco Monopoly</h1><button id="nfcb" onclick="startNFC()">📡 Activar NFC</button></header>
+<main id="main"></main>
+<nav><button id="t0" onclick="go(0)">Jugadores</button><button id="t1" onclick="go(1)">Historial</button><button id="t2" onclick="go(2)">Ajustes</button></nav>
+<div id="modal"></div><div id="toast"></div>
+<script>
+const KEY='monopoly-nfc-v1',COL=['#e53935','#1e88e5','#43a047','#fb8c00','#8e24aa','#00acc1','#fdd835','#6d4c41'];
+const PRE=[['Salida',200],['Impuesto',200],['Lujo',100],['Fianza',50],['Comunidad',100]];
+let S=load()||{players:[],log:[],start:1500},view=0,cur=null,amt='',note='',assigning=null,nfcOn=false,resetArm=false;
+function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+const $=s=>document.querySelector(s),fmt=n=>n.toLocaleString('es-ES')+' €',P=id=>S.players.find(p=>p.id===id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',2600)}
+function buzz(){try{navigator.vibrate&&navigator.vibrate(60)}catch(e){}}
+function go(v){view=v;resetArm=false;render()}
+function apply(ch,desc){
+  for(const c of ch){const p=P(c.pid);if(p.bal+c.d<0){toast('⚠️ '+p.name+' no tiene saldo suficiente ('+fmt(p.bal)+')');return false}}
+  ch.forEach(c=>P(c.pid).bal+=c.d);
+  S.log.unshift({t:Date.now(),d:desc,c:ch});S.log=S.log.slice(0,300);save();buzz();return true}
+function undo(){const l=S.log.shift();if(!l)return;l.c.forEach(c=>{const p=P(c.pid);if(p)p.bal-=c.d});save();toast('Deshecho: '+l.d);render()}
+function render(){
+  [0,1,2].forEach(i=>$('#t'+i).className=view===i?'on':'');
+  const m=$('#main');let h='';
+  if(view===0){
+    if(!S.players.length)h='<div class="box">Aún no hay jugadores. Ve a <b>Ajustes</b> para añadirlos y asignarles su tarjeta.</div>';
+    else h='<div class="grid">'+S.players.map(p=>`<button class="pl" style="--c:${p.color}" onclick="openP('${p.id}')"><b>${esc(p.name)}</b><div class="m ${p.bal<=0?'neg':''}">${fmt(p.bal)}</div><small>${p.tag?'💳 tarjeta asignada':'sin tarjeta'}</small></button>`).join('')+'</div>';
+    h+=`<div class="box" style="margin-top:12px">${nfcOn?'📡 NFC activo: acerca una tarjeta al móvil.':'Pulsa “Activar NFC” arriba para leer tarjetas, o toca un jugador.'}</div>`;
+    if(S.log.length)h+=`<button onclick="undo()" style="width:100%">↩️ Deshacer: ${esc(S.log[0].d)}</button>`;
+  }else if(view===1){
+    h=S.log.length?`<button onclick="undo()" style="width:100%;margin-bottom:8px">↩️ Deshacer último movimiento</button>`+S.log.map(l=>`<div class="lg"><span>${esc(l.d)}</span><small>${new Date(l.t).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</small></div>`).join(''):'<div class="box">Sin movimientos todavía.</div>';
+  }else{
+    h=`<div class="box"><b>Añadir jugador</b><div class="row"><input id="np" placeholder="Nombre" maxlength="14"><button class="p" style="flex:none" onclick="addP()">Añadir</button></div>
+    <div class="lbl">Dinero inicial</div><input id="st" type="number" inputmode="numeric" value="${S.start}" onchange="S.start=Math.max(0,Math.floor(+this.value)||1500);save()"></div>`;
+    h+=S.players.map(p=>`<div class="box" style="border-left:8px solid ${p.color}"><input value="${esc(p.name)}" maxlength="14" onchange="P('${p.id}').name=this.value||'Jugador';save()">
+    <div class="row"><button class="${assigning===p.id?'on':''}" onclick="assign('${p.id}')">${assigning===p.id?'Acerca la tarjeta…':p.tag?'💳 Cambiar tarjeta':'💳 Asignar tarjeta'}</button>
+    <button onclick="setBal('${p.id}')">✏️ Saldo</button><button onclick="delP('${p.id}')">🗑️</button></div></div>`).join('');
+    h+=`<button class="r" style="width:100%;margin-top:6px" onclick="resetG()">${resetArm?'¿Seguro? Pulsa otra vez para borrar todo':'Nueva partida (borra todo)'}</button>`;
+  }
+  m.innerHTML=h;
+}
+function addP(){const n=$('#np').value.trim();if(!n)return toast('Escribe un nombre');if(S.players.length>=8)return toast('Máximo 8 jugadores');
+  S.players.push({id:'p'+Date.now(),name:n,color:COL[S.players.length%8],bal:S.start,tag:null});save();render()}
+function delP(id){const p=P(id);if(p.del){S.players=S.players.filter(x=>x.id!==id);save();render()}else{p.del=1;toast('Pulsa 🗑️ otra vez para eliminar a '+p.name);setTimeout(()=>{delete p.del},3000)}}
+function setBal(id){const p=P(id),v=prompt('Nuevo saldo de '+p.name,p.bal);if(v===null)return;const n=Math.floor(+v);if(isNaN(n)||n<0)return toast('Cantidad no válida');
+  S.log.unshift({t:Date.now(),d:'Ajuste manual: '+p.name+' pasa a '+fmt(n),c:[{pid:id,d:n-p.bal}]});p.bal=n;save();render()}
+function resetG(){if(!resetArm){resetArm=true;render();setTimeout(()=>{resetArm=false;if(view===2)render()},4000);return}
+  S.players.forEach(p=>{p.bal=S.start});S.log=[];resetArm=false;save();toast('Saldos reiniciados (jugadores y tarjetas se conservan)');render()}
+function assign(id){assigning=assigning===id?null:id;if(assigning&&!nfcOn)startNFC();render()}
+async function startNFC(){
+  if(!('NDEFReader' in window)){toast('Este navegador no soporta NFC. Abre el enlace en Chrome para Android.');return}
+  try{const r=new NDEFReader();await r.scan();
+    r.onreading=e=>{let id=e.serialNumber;if(!id){try{const rec=e.message.records.find(x=>x.recordType==='text');id=new TextDecoder().decode(rec.data)}catch(x){}}
+      if(id)onTag(id.toUpperCase());else toast('No se pudo leer la tarjeta')};
+    r.onreadingerror=()=>toast('Error al leer. Acércala de nuevo.');
+    nfcOn=true;$('#nfcb').textContent='📡 NFC activo';$('#nfcb').className='on';toast('NFC activado');render();
+  }catch(e){const n=e&&e.name||'Error';toast(n==='NotAllowedError'||n==='SecurityError'?'Bloqueado por el navegador ('+n+'). La página no puede usar NFC desde aquí: alójala en GitHub Pages o ábrela en Chrome.':n==='NotSupportedError'?'NFC desactivado o no disponible en este móvil ('+n+')':'No se pudo activar NFC ('+n+')')}}
+function onTag(id){
+  if(assigning){const o=S.players.find(p=>p.tag===id&&p.id!==assigning);if(o){toast('Esa tarjeta ya es de '+o.name);return}
+    const p=P(assigning);p.tag=id;assigning=null;save();buzz();toast('Tarjeta asignada a '+p.name);render();return}
+  const p=S.players.find(p=>p.tag===id);if(!p){toast('Tarjeta sin asignar. Ve a Ajustes.');return}buzz();openP(p.id)}
+function openP(id){cur=id;amt='';note='';drawM()}
+function closeM(e){if(e&&e.target.className!=='ov')return;cur=null;$('#modal').innerHTML='';render()}
+function drawM(){
+  const p=P(cur);if(!p)return;
+  $('#modal').innerHTML=`<div class="ov" onclick="closeM(event)"><div class="sheet"><h2 style="border-left:8px solid ${p.color};padding-left:8px">${esc(p.name)} · ${fmt(p.bal)}</h2>
+  <input id="amt" type="number" inputmode="numeric" placeholder="Cantidad (€)" value="${amt}" oninput="amt=this.value;note=''">
+  <div class="chips">${[10,20,50,100,500].map(n=>`<button onclick="setA(${n},'')">${n}</button>`).join('')}</div>
+  <div class="lbl">Atajos</div><div class="chips">${PRE.map((x,i)=>`<button onclick="setA(${x[1]},'${x[0]}')">${x[0]} ${x[1]}</button>`).join('')}</div>
+  <div class="lbl">Banca</div><div class="row"><button class="g" onclick="bank(1)">＋ Cobrar de la banca</button><button class="r" onclick="bank(-1)">－ Pagar a la banca</button></div>
+  <div class="lbl">Pagar a otro jugador</div><div class="chips">${S.players.filter(x=>x.id!==cur).map(x=>`<button style="border-left:6px solid ${x.color}" onclick="pay('${x.id}')">${esc(x.name)}</button>`).join('')||'<small>No hay más jugadores</small>'}</div>
+  <div class="lbl">Con todos los demás</div><div class="row"><button onclick="all(1)">Cobrar a todos</button><button onclick="all(-1)">Pagar a todos</button></div>
+  <button style="width:100%;margin-top:8px" onclick="closeM()">Cerrar</button></div></div>`}
+function setA(n,t){amt=String(n);note=t;drawM()}
+function getA(){const a=Math.floor(Number($('#amt').value));if(!(a>0)){toast('Escribe una cantidad mayor que 0');return 0}return a}
+function done(){amt='';note='';drawM();render()}
+function bank(s){const a=getA();if(!a)return;const p=P(cur),n=note?' ('+note+')':'';
+  if(apply([{pid:cur,d:s*a}],s>0?`${p.name} cobra ${fmt(a)} de la banca${n}`:`${p.name} paga ${fmt(a)} a la banca${n}`)){toast(s>0?'Cobrado '+fmt(a):'Pagado '+fmt(a));done()}}
+function pay(id){const a=getA();if(!a)return;const p=P(cur),q=P(id);
+  if(apply([{pid:cur,d:-a},{pid:id,d:a}],`${p.name} paga ${fmt(a)} a ${q.name}${note?' ('+note+')':''}`)){toast(`${p.name} → ${q.name}: ${fmt(a)}`);done()}}
+function all(s){const a=getA();if(!a)return;const p=P(cur),o=S.players.filter(x=>x.id!==cur);if(!o.length)return;
+  const ch=[{pid:cur,d:s*a*o.length},...o.map(x=>({pid:x.id,d:-s*a}))];
+  if(apply(ch,s>0?`${p.name} cobra ${fmt(a)} a cada jugador${note?' ('+note+')':''}`:`${p.name} paga ${fmt(a)} a cada jugador${note?' ('+note+')':''}`)){toast('Hecho');done()}}
+render();
+</script>
+</body>
+</html>
