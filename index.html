@@ -419,14 +419,17 @@ button:disabled{opacity:.38;pointer-events:none}
     { n: 'Impuesto', c: 200, t: 'cobrarBote' },
     { n: 'Lujo', c: 100, t: 'cobrarBote' },
     { n: 'Fianza', c: 50, t: 'cobrarBote' },
-    { n: 'Comunidad', c: 100, t: null }
+    { n: 'Comunidad', c: 100, t: null },
+    { n: 'Cumpleaños', c: 10, t: 'todosPaganA' }
   ];
   var TIPOS = {
     cobrarBanca:   { titulo: 'Cobrar a la banca', sub: 'Impuestos, multas, compras', clase: 'rojo', icono: 'banca' },
     cobrarBote:    { titulo: 'Cobrar al bote', sub: 'El dinero va al bote del Parking', clase: 'rojo', icono: 'bote' },
     pagarJugador:  { titulo: 'Pagar al jugador', sub: 'La banca paga: salida, cartas', clase: 'verde', icono: 'entra' },
     darBote:       { titulo: 'Dar el bote del Parking', sub: 'Sin cantidad · el bote queda a 0', clase: 'verde', icono: 'bote' },
-    transferencia: { titulo: 'Transferencia entre jugadores', sub: 'Alquileres: primero paga, luego cobra', clase: 'oro', icono: 'flechas' }
+    transferencia: { titulo: 'Transferencia entre jugadores', sub: 'Alquileres: primero paga, luego cobra', clase: 'oro', icono: 'flechas' },
+    todosPaganA:   { titulo: 'Todos pagan a un jugador', sub: 'Cumpleaños, cartas: cada uno paga a quien acerca su tarjeta', clase: 'verde', icono: 'entra' },
+    unoPagaATodos: { titulo: 'Un jugador paga a todos', sub: 'Cartas: quien acerca su tarjeta paga a cada uno', clase: 'rojo', icono: 'sale' }
   };
 
   var IC = {
@@ -1121,6 +1124,10 @@ button:disabled{opacity:.38;pointer-events:none}
         instr = 'Ahora acerca la tarjeta de quien <b>COBRA</b>';
         extra = '<div class="paso">Paga: <b>' + esc(p ? p.nombre : '') + '</b> · Paso 2 de 2</div>';
       }
+    } else if (cmd.tipo === 'todosPaganA') {
+      instr = 'Acerca la tarjeta de quien <b>COBRA</b><br><small>Los demás jugadores le pagan ' + fmt(cmd.cant) + ' cada uno</small>';
+    } else if (cmd.tipo === 'unoPagaATodos') {
+      instr = 'Acerca la tarjeta de quien <b>PAGA</b><br><small>Pagará ' + fmt(cmd.cant) + ' a cada jugador</small>';
     } else {
       instr = 'Acerca la tarjeta del jugador';
     }
@@ -1157,6 +1164,19 @@ button:disabled{opacity:.38;pointer-events:none}
         var b = E.bote;
         if (b <= 0) { mostrarResultado({ ok: false, motivo: 'El bote está vacío', jugador: j }); return; }
         r = aplicar(et + j.nombre + ' cobra el bote del Parking (' + fmt(b) + ')', [{ id: j.id, d: b }], -b); break;
+      }
+      case 'todosPaganA':
+      case 'unoPagaATodos': {
+        var resto = E.jugadores.filter(function (o) { return o.id !== j.id; });
+        if (!resto.length) { mostrarResultado({ ok: false, motivo: 'No hay más jugadores', jugador: j }); return; }
+        if (cmd.tipo === 'todosPaganA') {
+          r = aplicar(et + j.nombre + ' cobra ' + fmt(c) + ' a cada jugador',
+            [{ id: j.id, d: c * resto.length }].concat(resto.map(function (o) { return { id: o.id, d: -c }; })), 0);
+        } else {
+          r = aplicar(et + j.nombre + ' paga ' + fmt(c) + ' a cada jugador',
+            [{ id: j.id, d: -c * resto.length }].concat(resto.map(function (o) { return { id: o.id, d: c }; })), 0);
+        }
+        break;
       }
       case 'transferencia': {
         if (cmd.paso === 1) {
